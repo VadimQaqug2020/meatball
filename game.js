@@ -344,7 +344,7 @@
   }
 
   function enemyLoseMessage(enemy) {
-    return enemy.kind === 'walker' ? 'Офісник дійшов до гравця!' : 'Офісник з айкосом дійшов до гравця!';
+    return enemy.kind === 'walker' ? 'Офісник дійшов до гравця!!' : 'Офісник з айкосом дійшов до гравця!';
   }
 
   function triggerTyshchenkoHit() {
