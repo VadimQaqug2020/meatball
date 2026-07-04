@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Кидати помідорами в Тищенка</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="ui">
+    <div class="score">Влучань: <span id="score">0</span></div>
+    <div class="hint">Клікни або торкнись — кинути помідор</div>
+  </div>
+
+  <canvas id="game"></canvas>
+
+  <div id="overlay" class="hidden">
+    <div class="panel">
+      <img id="gameover-face" class="gameover-face" src="assets/face-gameover.png" alt="">
+      <h1 id="overlay-title">Програш</h1>
+      <p id="overlay-text">Офісник дійшов до гравця!</p>
+      <p class="final-score">Влучань: <span id="final-score">0</span></p>
+      <button id="restart">Грати знову</button>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
