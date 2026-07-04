@@ -31,6 +31,9 @@
     walkerMaxScale: 1.12,
     mobileBreakpoint: 640,
     mobileSpriteScale: 0.76,
+    mobileOfficeSpawnMultiplier: 2,
+    mobileOfficeSpeedMultiplier: 0.8,
+    mobileCooldownMultiplier: 0.7,
   };
 
   function isMobileLayout() {
@@ -39,6 +42,24 @@
 
   function spriteLayoutScale() {
     return isMobileLayout() ? CONFIG.mobileSpriteScale : 1;
+  }
+
+  function effectiveCooldownMs() {
+    return isMobileLayout()
+      ? CONFIG.cooldownMs * CONFIG.mobileCooldownMultiplier
+      : CONFIG.cooldownMs;
+  }
+
+  function effectiveOfficeSpawnMs() {
+    return isMobileLayout()
+      ? CONFIG.officeSpawnMs * CONFIG.mobileOfficeSpawnMultiplier
+      : CONFIG.officeSpawnMs;
+  }
+
+  function effectiveOfficeSpeed() {
+    return isMobileLayout()
+      ? CONFIG.officeSpeed * CONFIG.mobileOfficeSpeedMultiplier
+      : CONFIG.officeSpeed;
   }
 
   const THROW_ASSETS = Object.fromEntries(
@@ -251,7 +272,7 @@
   }
 
   function throwLockRemainingMs(now) {
-    const cooldownRemaining = CONFIG.cooldownMs - (now - lastThrow);
+    const cooldownRemaining = effectiveCooldownMs() - (now - lastThrow);
     if (!throwAnimActive) {
       return Math.max(cooldownRemaining, 0);
     }
@@ -431,14 +452,14 @@
       tyshchenko.hitFaceKey = null;
     }
 
-    if (now - gameStartTime > 2500 && now - lastSpawn >= CONFIG.officeSpawnMs) {
+    if (now - gameStartTime > 2500 && now - lastSpawn >= effectiveOfficeSpawnMs()) {
       spawnEnemy();
       lastSpawn = now;
     }
 
     for (let i = enemies.length - 1; i >= 0; i -= 1) {
       const enemy = enemies[i];
-      enemy.y += CONFIG.officeSpeed * dt;
+      enemy.y += effectiveOfficeSpeed() * dt;
       if (enemy.kind === 'walker') {
         enemy.animTime += dt * 1000;
         updateWalkerScale(enemy);
@@ -607,7 +628,7 @@
     const remaining = throwLockRemainingMs(now);
     if (remaining <= 0) return;
 
-    const lockTotal = Math.max(CONFIG.cooldownMs, throwAnimDurationMs());
+    const lockTotal = Math.max(effectiveCooldownMs(), throwAnimDurationMs());
     const t = remaining / lockTotal;
     const origin = playerOrigin(performance.now());
 
