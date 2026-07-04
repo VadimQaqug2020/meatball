@@ -48,6 +48,51 @@ def remove_flat(path: Path, predicate) -> tuple[int, int]:
     return removed, width * height
 
 
+def is_meatball_checker(r: int, g: int, b: int) -> bool:
+    if max(r, g, b) - min(r, g, b) > 14:
+        return False
+    avg = (r + g + b) / 3
+    return avg >= 218 or (34 <= avg <= 46) or (74 <= avg <= 88)
+
+
+def remove_flood_simple(path: Path, predicate) -> tuple[int, int]:
+    image = Image.open(path).convert("RGBA")
+    pixels = image.load()
+    width, height = image.size
+    bg = [[False] * width for _ in range(height)]
+    queue: deque[tuple[int, int]] = deque()
+
+    def try_seed(x: int, y: int) -> None:
+        if predicate(*pixels[x, y][:3]) and not bg[y][x]:
+            bg[y][x] = True
+            queue.append((x, y))
+
+    for x in range(width):
+        try_seed(x, 0)
+        try_seed(x, height - 1)
+    for y in range(height):
+        try_seed(0, y)
+        try_seed(width - 1, y)
+
+    while queue:
+        x, y = queue.popleft()
+        for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if 0 <= nx < width and 0 <= ny < height and not bg[ny][nx]:
+                if predicate(*pixels[nx, ny][:3]):
+                    bg[ny][nx] = True
+                    queue.append((nx, ny))
+
+    removed = 0
+    for y in range(height):
+        for x in range(width):
+            if bg[y][x]:
+                pixels[x, y] = (0, 0, 0, 0)
+                removed += 1
+
+    image.save(path, "PNG")
+    return removed, width * height
+
+
 def remove_flood(path: Path, predicate) -> tuple[int, int]:
     image = Image.open(path).convert("RGBA")
     pixels = image.load()
@@ -159,6 +204,7 @@ def main() -> int:
         ("flat", is_office_checker, ["office-iqos.png", "office-stand.png"]),
         ("flat", is_throw_checker, [f"throw-{index}.png" for index in range(1, 6)]),
         ("flood", is_studio_bg, [f"temshchyk-{index}.png" for index in range(1, 6)]),
+        ("flood_simple", is_meatball_checker, ["meatball.png"]),
     ]
 
     for mode, predicate, files in jobs:
@@ -169,6 +215,8 @@ def main() -> int:
                 continue
             if mode == "flood":
                 removed, total = remove_flood(path, predicate)
+            elif mode == "flood_simple":
+                removed, total = remove_flood_simple(path, predicate)
             else:
                 removed, total = remove_flat(path, predicate)
             percent = 100 * removed / total if total else 0

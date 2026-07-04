@@ -13,13 +13,13 @@
 
   const CONFIG = {
     cooldownMs: 100,
-    maxOfficeWorkers: 5,
+    maxOfficeWorkers: 3,
     officeSpeed: 120,
     officeSpawnMs: 1800,
     tyshchenkoSpeed: 70,
-    tyshchenkoMoveRange: 0.22,
+    tyshchenkoEdgeRatio: 0.04,
     hitFlashMs: 1000,
-    tomatoSpeed: 680,
+    tomatoSpeed: 730,
     tomatoRadius: 14,
     loseEdgePadding: 8,
     playerLineRatio: 0.92,
@@ -29,7 +29,17 @@
     walkerFrameMs: 110,
     walkerMinScale: 0.72,
     walkerMaxScale: 1.12,
+    mobileBreakpoint: 640,
+    mobileSpriteScale: 0.76,
   };
+
+  function isMobileLayout() {
+    return window.innerWidth <= CONFIG.mobileBreakpoint;
+  }
+
+  function spriteLayoutScale() {
+    return isMobileLayout() ? CONFIG.mobileSpriteScale : 1;
+  }
 
   const THROW_ASSETS = Object.fromEntries(
     Array.from({ length: 15 }, (_, index) => {
@@ -43,10 +53,14 @@
     mainFigure: 'assets/main-figure.png',
     faceHit1: 'assets/face-hit-1.png',
     faceHit2: 'assets/face-hit-2.png',
+    faceHit3: 'assets/face-hit-3.png',
+    faceHit4: 'assets/face-hit-4.png',
+    faceHit5: 'assets/face-hit-5.png',
     faceGameover: 'assets/face-gameover.png',
     officeIqos: 'assets/office-iqos.png',
     officeStand: 'assets/office-stand.png',
-    meatball: 'assets/meatball.svg',
+    meatball: 'assets/meatball.png',
+    thailandPassport: 'assets/thailand-passport.png',
     ...THROW_ASSETS,
     walker1: 'assets/walker-01.png',
     walker2: 'assets/walker-02.png',
@@ -59,6 +73,7 @@
     const num = String(index + 1).padStart(2, '0');
     return `throwPixel${num}`;
   });
+  const HIT_FACE_KEYS = ['faceHit1', 'faceHit2', 'faceHit3', 'faceHit4', 'faceHit5'];
   const WALKER_FRAME_KEYS = ['walker1', 'walker2', 'walker3', 'walker4', 'walker5'];
 
   const ENEMY_TYPES = [
@@ -92,7 +107,7 @@
   let lastSpawn = 0;
   let gameStartTime = 0;
   let lastFrame = 0;
-  let nextHitFace = 1;
+  let nextHitFaceIndex = 0;
   let throwAnimStart = 0;
   let throwAnimActive = false;
   let throwProjectilePending = null;
@@ -102,7 +117,8 @@
     y: 0,
     width: 0,
     height: 0,
-    baseX: 0,
+    centerX: 0,
+    travel: 0,
     phase: 0,
     hitUntil: 0,
     hitFaceKey: null,
@@ -111,6 +127,7 @@
   const tomatoes = [];
   const enemies = [];
   const meatballs = [];
+  const passports = [];
 
   function playerLineY() {
     return window.innerHeight * CONFIG.playerLineRatio;
@@ -137,11 +154,16 @@
       ? images.mainFigure.width / images.mainFigure.height
       : 308 / 649;
 
-    tyshchenko.height = Math.min(h * 0.26, 220);
+    tyshchenko.height = Math.min(h * 0.26, 220) * spriteLayoutScale();
     tyshchenko.width = tyshchenko.height * mainAspect;
-    tyshchenko.baseX = w * 0.78;
     tyshchenko.y = h * CONFIG.tyshchenkoTopRatio;
-    tyshchenko.x = tyshchenko.baseX;
+
+    const edge = w * CONFIG.tyshchenkoEdgeRatio;
+    const minX = edge;
+    const maxX = Math.max(minX, w - tyshchenko.width - edge);
+    tyshchenko.centerX = (minX + maxX) / 2;
+    tyshchenko.travel = (maxX - minX) / 2;
+    tyshchenko.x = tyshchenko.centerX;
   }
 
   function throwHandLayout(now) {
@@ -150,7 +172,7 @@
     const frameKey = THROW_FRAME_KEYS[getThrowFrameIndex(now)];
     const img = images[frameKey];
     const aspect = img ? img.width / img.height : 224 / 213;
-    const drawHeight = Math.min(h * 0.48, 420);
+    const drawHeight = Math.min(h * 0.48, 420) * spriteLayoutScale();
     const drawWidth = drawHeight * aspect;
 
     return {
@@ -185,13 +207,14 @@
     lastThrow = 0;
     lastSpawn = 0;
     gameStartTime = performance.now();
-    nextHitFace = 1;
+    nextHitFaceIndex = 0;
     tyshchenko.phase = 0;
     tyshchenko.hitUntil = 0;
     tyshchenko.hitFaceKey = null;
     tomatoes.length = 0;
     enemies.length = 0;
     meatballs.length = 0;
+    passports.length = 0;
     throwAnimActive = false;
     throwProjectilePending = null;
     scoreEl.textContent = '0';
@@ -219,15 +242,33 @@
       y: origin.y,
       vx: (dx / dist) * CONFIG.tomatoSpeed,
       vy: (dy / dist) * CONFIG.tomatoSpeed,
-      radius: CONFIG.tomatoRadius,
+      radius: CONFIG.tomatoRadius * spriteLayoutScale(),
     });
+  }
+
+  function throwAnimDurationMs() {
+    return THROW_FRAME_KEYS.length * CONFIG.throwFrameMs;
+  }
+
+  function throwLockRemainingMs(now) {
+    const cooldownRemaining = CONFIG.cooldownMs - (now - lastThrow);
+    if (!throwAnimActive) {
+      return Math.max(cooldownRemaining, 0);
+    }
+
+    const animRemaining = throwAnimDurationMs() - (now - throwAnimStart);
+    return Math.max(cooldownRemaining, animRemaining, 0);
+  }
+
+  function canThrow(now) {
+    return throwLockRemainingMs(now) <= 0;
   }
 
   function throwTomato() {
     if (gameOver || !started || loadedCount < totalAssets) return;
 
     const now = performance.now();
-    if (now - lastThrow < CONFIG.cooldownMs) return;
+    if (!canThrow(now)) return;
 
     throwAnimStart = now;
     throwAnimActive = true;
@@ -258,7 +299,7 @@
     const w = window.innerWidth;
     const h = window.innerHeight;
     const type = ENEMY_TYPES[Math.floor(Math.random() * ENEMY_TYPES.length)];
-    const height = Math.min(h * 0.22, 200);
+    const height = Math.min(h * 0.22, 200) * spriteLayoutScale();
     const width = height * type.aspect;
     const minX = w * 0.12;
     const maxX = w * 0.88 - width;
@@ -309,8 +350,8 @@
   function triggerTyshchenkoHit() {
     score += 1;
     scoreEl.textContent = String(score);
-    tyshchenko.hitFaceKey = nextHitFace === 1 ? 'faceHit1' : 'faceHit2';
-    nextHitFace = nextHitFace === 1 ? 2 : 1;
+    tyshchenko.hitFaceKey = HIT_FACE_KEYS[nextHitFaceIndex];
+    nextHitFaceIndex = (nextHitFaceIndex + 1) % HIT_FACE_KEYS.length;
     tyshchenko.hitUntil = performance.now() + CONFIG.hitFlashMs;
 
     meatballs.push({
@@ -318,10 +359,28 @@
       y: tyshchenko.y + tyshchenko.height * 0.82,
       vy: 80,
       vx: (Math.random() - 0.5) * 80,
-      size: Math.min(tyshchenko.height * 0.2, 64),
+      size: Math.min(tyshchenko.height * 0.2, 64) * 5 * spriteLayoutScale(),
       rotation: 0,
       spin: (Math.random() - 0.5) * 6,
     });
+
+    if (score % 5 === 0) {
+      const passportImg = images.thailandPassport;
+      const passportAspect = passportImg ? passportImg.width / passportImg.height : 0.72;
+      const passportHeight = Math.min(tyshchenko.height * 0.42, 140) * spriteLayoutScale();
+      const passportWidth = passportHeight * passportAspect;
+
+      passports.push({
+        x: tyshchenko.x + tyshchenko.width * 0.38,
+        y: tyshchenko.y + tyshchenko.height * 0.7,
+        vy: 95,
+        vx: (Math.random() - 0.5) * 120,
+        width: passportWidth,
+        height: passportHeight,
+        rotation: (Math.random() - 0.5) * 0.5,
+        spin: (Math.random() - 0.5) * 5,
+      });
+    }
   }
 
   function circleRectHit(cx, cy, radius, rect) {
@@ -365,7 +424,8 @@
 
     const w = window.innerWidth;
     tyshchenko.phase += dt;
-    tyshchenko.x = tyshchenko.baseX - Math.sin(tyshchenko.phase * CONFIG.tyshchenkoSpeed * 0.02) * (w * CONFIG.tyshchenkoMoveRange);
+    tyshchenko.x =
+      tyshchenko.centerX + Math.sin(tyshchenko.phase * CONFIG.tyshchenkoSpeed * 0.02) * tyshchenko.travel;
 
     if (tyshchenko.hitFaceKey && now >= tyshchenko.hitUntil) {
       tyshchenko.hitFaceKey = null;
@@ -437,6 +497,18 @@
         meatballs.splice(i, 1);
       }
     }
+
+    for (let i = passports.length - 1; i >= 0; i -= 1) {
+      const passport = passports[i];
+      passport.vy += 780 * dt;
+      passport.x += passport.vx * dt;
+      passport.y += passport.vy * dt;
+      passport.rotation += passport.spin * dt;
+
+      if (passport.y > playerLineY() + 40) {
+        passports.splice(i, 1);
+      }
+    }
   }
 
   function drawBackground() {
@@ -495,7 +567,7 @@
 
     const x = pointer.x;
     const y = pointer.y;
-    const size = 16;
+    const size = 16 * spriteLayoutScale();
 
     ctx.save();
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
@@ -532,10 +604,11 @@
   }
 
   function drawCooldown(now) {
-    const elapsed = now - lastThrow;
-    if (elapsed >= CONFIG.cooldownMs) return;
+    const remaining = throwLockRemainingMs(now);
+    if (remaining <= 0) return;
 
-    const t = 1 - elapsed / CONFIG.cooldownMs;
+    const lockTotal = Math.max(CONFIG.cooldownMs, throwAnimDurationMs());
+    const t = remaining / lockTotal;
     const origin = playerOrigin(performance.now());
 
     ctx.save();
@@ -590,6 +663,20 @@
       ctx.translate(ball.x, ball.y);
       ctx.rotate(ball.rotation);
       drawEntityImage(images.meatball, -ball.size / 2, -ball.size / 2, ball.size, ball.size);
+      ctx.restore();
+    }
+
+    for (const passport of passports) {
+      ctx.save();
+      ctx.translate(passport.x, passport.y);
+      ctx.rotate(passport.rotation);
+      drawEntityImage(
+        images.thailandPassport,
+        -passport.width / 2,
+        -passport.height / 2,
+        passport.width,
+        passport.height,
+      );
       ctx.restore();
     }
 

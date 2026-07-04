@@ -17,12 +17,13 @@ python3 -m http.server 8080
 |------|-------------|
 | `restaurant.png` | Фон ресторану «Velour» |
 | `main-figure.png` | Тищенко (основна фігура) |
-| `face-hit-1.png`, `face-hit-2.png` | Реакція на влучання (чергуються) |
+| `face-hit-1.png` … `face-hit-5.png` | Реакція на влучання (чергуються) |
 | `face-gameover.png` | Обличчя на екрані поразки |
 | `office-iqos.png`, `office-stand.png` | Офісники |
 | `walker-01.png` … `walker-05.png` | Незнайомець (5 кадрів ходьби на гравця) |
 | `throw-pixel-01.png` … `throw-pixel-15.png` | Pixel-art анімація кидка (15 кадрів) |
-| `meatball.svg` | Мітбол при влучанні |
+| `meatball.png` | Мітбол при влучанні |
+| `thailand-passport.png` | Паспорт Таїланду (кожне 5-те влучання) |
 
 ## Прозорий фон (без «квадратиків»)
 
