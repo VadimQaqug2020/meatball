@@ -104,6 +104,39 @@ body {
   font-weight: 700;
 }
 
+#ui.hidden {
+  display: none;
+}
+
+#start-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+#start-menu.hidden {
+  display: none;
+}
+
+.start-panel h1 {
+  font-size: clamp(22px, 5vw, 34px);
+  line-height: 1.2;
+}
+
+.start-tagline {
+  margin-top: 10px;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: clamp(14px, 2.5vw, 18px);
+}
+
+.start-rules {
+  margin-top: 14px;
+}
+
+#start,
 #restart {
   margin-top: 22px;
   border: none;
@@ -116,6 +149,7 @@ body {
   background: linear-gradient(180deg, #ffd56a, #c9a24d);
 }
 
+#start:hover,
 #restart:hover {
   filter: brightness(1.05);
 }

@@ -3,6 +3,9 @@
   const ctx = canvas.getContext('2d');
   const scoreEl = document.getElementById('score');
   const overlay = document.getElementById('overlay');
+  const startMenu = document.getElementById('start-menu');
+  const ui = document.getElementById('ui');
+  const startBtn = document.getElementById('start');
   const overlayTitle = document.getElementById('overlay-title');
   const overlayText = document.getElementById('overlay-text');
   const finalScoreEl = document.getElementById('final-score');
@@ -192,6 +195,8 @@
     throwAnimActive = false;
     throwProjectilePending = null;
     scoreEl.textContent = '0';
+    startMenu.classList.add('hidden');
+    ui.classList.remove('hidden');
     overlay.classList.add('hidden');
     layoutEntities();
   }
@@ -219,7 +224,7 @@
   }
 
   function throwTomato() {
-    if (gameOver || loadedCount < totalAssets) return;
+    if (gameOver || !started || loadedCount < totalAssets) return;
 
     const now = performance.now();
     if (now - lastThrow < CONFIG.cooldownMs) return;
@@ -486,7 +491,7 @@
   }
 
   function drawCrosshair() {
-    if (!pointer.active || gameOver) return;
+    if (!pointer.active || gameOver || !started) return;
 
     const x = pointer.x;
     const y = pointer.y;
@@ -623,7 +628,6 @@
 
   canvas.addEventListener('mousedown', (event) => {
     setPointer(event.clientX, event.clientY);
-    if (!started) resetGame();
     throwTomato();
   });
 
@@ -633,7 +637,6 @@
       event.preventDefault();
       const touch = event.changedTouches[0];
       setPointer(touch.clientX, touch.clientY);
-      if (!started) resetGame();
       throwTomato();
     },
     { passive: false },
@@ -650,6 +653,7 @@
   );
 
   restartBtn.addEventListener('click', resetGame);
+  startBtn.addEventListener('click', resetGame);
   window.addEventListener('resize', resize);
 
   Promise.all(Object.entries(ASSETS).map(([key, src]) => loadImage(key, src)))
@@ -661,6 +665,7 @@
       requestAnimationFrame(frame);
     })
     .catch(() => {
+      startMenu.classList.add('hidden');
       overlayTitle.textContent = 'Помилка';
       overlayText.textContent = 'Не вдалося завантажити зображення.';
       overlay.classList.remove('hidden');

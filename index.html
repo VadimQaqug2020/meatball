@@ -7,12 +7,21 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="ui">
+  <div id="ui" class="hidden">
     <div class="score">Влучань: <span id="score">0</span></div>
     <div class="hint">Клікни або торкнись — кинути помідор</div>
   </div>
 
   <canvas id="game"></canvas>
+
+  <div id="start-menu">
+    <div class="panel start-panel">
+      <h1>Кидати помідорами в Тищенка</h1>
+      <p class="start-tagline">Велюр, офісники і один дуже меткий незнайомець.</p>
+      <p class="start-rules">Кидай помідори в Тищенка. Не дай ворогам дійти до тебе.</p>
+      <button id="start" type="button">Старт</button>
+    </div>
+  </div>
 
   <div id="overlay" class="hidden">
     <div class="panel">
