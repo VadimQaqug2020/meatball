@@ -16,7 +16,7 @@
     maxOfficeWorkers: 3,
     officeSpeed: 120,
     officeSpawnMs: 1800,
-    tyshchenkoSpeed: 70,
+    tyshchenkoSpeed: 45,
     tyshchenkoEdgeRatio: 0.04,
     hitFlashMs: 1000,
     tomatoSpeed: 730,
